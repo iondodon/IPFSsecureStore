@@ -22,14 +22,15 @@ const ETHERSCAN_API_KEY =
     process.env.ETHERSCAN_API_KEY || "EQMI7ITDPE7FSB4EDRRNWV4283PEGUDAHX"
 
 module.exports = {
-    defaultNetwork: "ganache",
+    defaultNetwork: "hardhat",
     networks: {
-        hardhat: {
+        localhost: {
+            // port 8545
             chainId: 31337,
             // gasPrice: 130000000000,
         },
         ganache: {
-            url: "http://127.0.0.1:8545",
+            url: "http://127.0.0.1:7545",
             chainId: 1337,
         },
         goerli: {
@@ -44,16 +45,13 @@ module.exports = {
             {
                 version: "0.8.7",
             },
-            {
-                version: "0.6.6",
-            },
         ],
     },
     etherscan: {
         apiKey: ETHERSCAN_API_KEY,
     },
     gasReporter: {
-        enabled: false,
+        enabled: true,
         currency: "USD",
         outputFile: "gas-report.txt",
         noColors: true,
