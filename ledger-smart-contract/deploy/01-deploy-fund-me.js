@@ -1,6 +1,6 @@
 const { network } = require("hardhat")
 const { networkConfig, developmentChains } = require("../helper-hardhat-config")
-const { verify } = require("../utils/verify")
+const { verify, isTestnetNetwork } = require("../utils/verify")
 require("dotenv").config()
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
@@ -8,22 +8,19 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts()
     const chainId = network.config.chainId
 
-    log("Deploying FundMe and waiting for confirmations...")
-    const fundMe = await deploy("FundMe", {
+    log("Deploying Ledger and waiting for confirmations...")
+    const ledger = await deploy("Ledger", {
         from: deployer,
         args: [],
         log: true,
         // we need to wait if on a live network so we can verify properly
         waitConfirmations: network.config.blockConfirmations || 1,
     })
-    log(`FundMe deployed at ${fundMe.address}`)
+    log(`Ledger deployed at ${ledger.address}`)
 
-    if (
-        !developmentChains.includes(network.name) &&
-        process.env.ETHERSCAN_API_KEY
-    ) {
-        await verify(fundMe.address, [])
+    if (isTestnetNetwork(network) && process.env.ETHERSCAN_API_KEY) {
+        await verify(ledger.address, [])
     }
 }
 
-module.exports.tags = ["all", "fundme"]
+module.exports.tags = ["all", "ledger"]
