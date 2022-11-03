@@ -15,11 +15,14 @@ const COINMARKETCAP_API_KEY =
 const GOERLI_RPC_URL =
     process.env.GOERLI_RPC_URL ||
     "https://eth-goerli.g.alchemy.com/v2/pmtL3h1WMA4psRITQ9ycAnMOeNsdwK5U"
+const GANACHE_RPC_URL = process.env.GANACHE_RPC_URL || "http://127.0.0.1:7545"
 const PRIVATE_KEY =
     process.env.PRIVATE_KEY ||
     "75954fbabd6b1263e014b4d5da74b6650344d5b5524fae9565462aad79ea2dd9"
 const ETHERSCAN_API_KEY =
     process.env.ETHERSCAN_API_KEY || "EQMI7ITDPE7FSB4EDRRNWV4283PEGUDAHX"
+const GANACHE_FIRST_PRIVATE_KEY =
+    "db29ac08206c0a2d22b5d5e12ab97b70d2e054589b8922199a32455541fb3860"
 
 module.exports = {
     defaultNetwork: "hardhat",
@@ -30,7 +33,8 @@ module.exports = {
             // gasPrice: 130000000000,
         },
         ganache: {
-            url: "http://127.0.0.1:7545",
+            url: GANACHE_RPC_URL,
+            accounts: [GANACHE_FIRST_PRIVATE_KEY],
             chainId: 1337,
         },
         goerli: {
