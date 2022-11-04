@@ -1,27 +1,32 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-error Ledger__NotOwner();
+error NotOwnerError();
 
 contract Ledger {
     address public immutable i_owner;
     address[] public users;
     mapping(address => uint256) public s_donatorToDonatedAmounts;
-    mapping(address => uint256) public s_addressToDataHash;
+    mapping(string => address) public s_cidToAddress;
+    mapping(address => string[]) public s_addressToOwnedCids;
 
-    event NewDataStore(address owner, string data);
-    event DonationWithdrawal();
+    event NewCidRegistered(address ownerAddress, string cid);
+    event DonationsWithdrawal();
     event NewDonation();
 
     constructor() {
         i_owner = msg.sender;
     }
 
-    function registerNewData(string memory data) public {
-        emit NewDataStore(msg.sender, data);
+    function registerNewData(string memory cid) public {
+        s_cidToAddress[cid] = msg.sender;
+        s_addressToOwnedCids[msg.sender].push(cid);
+        users.push(msg.sender);
+        emit NewCidRegistered(msg.sender, cid);
     }
 
     function withdraw() public onlyOwner {
+        emit DonationsWithdrawal();
         (bool success, ) = payable(msg.sender).call{
             value: address(this).balance
         }("");
@@ -41,7 +46,7 @@ contract Ledger {
 
     modifier onlyOwner() {
         if (msg.sender != i_owner) {
-            revert Ledger__NotOwner();
+            revert NotOwnerError();
         }
         _;
     }

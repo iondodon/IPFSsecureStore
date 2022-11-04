@@ -33,7 +33,7 @@ module.exports = {
             url: GOERLI_RPC_URL,
             accounts: [PRIVATE_KEY],
             chainId: 5,
-            blockConfirmations: 6,
+            blockConfirmations: 3,
         },
     },
     solidity: {
