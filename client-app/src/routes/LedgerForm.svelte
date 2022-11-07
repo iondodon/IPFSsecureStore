@@ -150,7 +150,6 @@
 	<label for="cid">CID</label>
 	<input id="cid" placeholder="CID"/>
 	<input id="userAddress" placeholder="user address"/>
-
 </div>
 
 <style>
