@@ -18,11 +18,27 @@ contract Ledger {
         i_owner = msg.sender;
     }
 
-    function registerNewData(string memory cid) public {
+    function publishCid(string memory cid) public {
         s_cidToAddress[cid] = msg.sender;
         s_addressToOwnedCids[msg.sender].push(cid);
         users.push(msg.sender);
         emit NewCidRegistered(msg.sender, cid);
+    }
+
+    function getPublishedCids() public view returns (string[] memory) {
+        return s_addressToOwnedCids[msg.sender];
+    }
+
+    function getPublishedCidsByUser(address userAddress)
+        public
+        view
+        returns (string[] memory)
+    {
+        return s_addressToOwnedCids[userAddress];
+    }
+
+    function getOwnerOfCid(string memory cid) public view returns (address) {
+        return s_cidToAddress[cid];
     }
 
     function withdraw() public onlyOwner {

@@ -19,7 +19,7 @@ const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY
 module.exports = {
     defaultNetwork: "hardhat",
     networks: {
-        localhost: {
+        hardhat: {
             // from hardhat
             // port 8545
             chainId: 31337,
@@ -56,7 +56,7 @@ module.exports = {
     namedAccounts: {
         deployer: {
             default: 0,
-            1: 0,
+            1: 0, // mainnet
             5: 0,
         },
     },

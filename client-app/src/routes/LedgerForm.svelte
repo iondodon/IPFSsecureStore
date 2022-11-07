@@ -1,75 +1,148 @@
 <script>
 	import { ethers }  from "ethers"
 	import { abi, contractAddress } from "./constants"
+	import { onMount } from 'svelte'
 
-	let metamaskStatus = "Not Connected"
+	let ethereum = null
+	let connectedAccounts = []
+	$: metamaskConnectionStatus = connectedAccounts.length > 0 ? "Connected" : "Not conneted"  
 
-	async function connect() {
-		if (typeof window.ethereum !== "undefined") {
-			try {
-				await ethereum.request({ method: "eth_requestAccounts" })
-			} catch (error) {
-				console.log(error)
-			}
-			metamaskStatus = "Connected"
-			const accounts = await ethereum.request({ method: "eth_accounts" })
-			console.log(accounts)
-		} else {
+	onMount(async () => {
+		ethereum = window.ethereum
+
+		ethereum.on('accountsChanged', (accounts) => {
+			console.log("Accounts changed", accounts)
+			connectedAccounts = accounts
+		})
+	})
+
+	const connect = async () => {
+		if (typeof ethereum === "undefined") {
 			console.log("Please install Metamask")
 		}
+
+		try {
+			await ethereum.request({ method: "eth_requestAccounts" })
+		} catch (error) {
+			console.log(error)
+		}
+
+		const accounts = await ethereum.request({ method: "eth_accounts" })
+		console.log("Accounts: ", accounts)
 	}
 
-	async function getBalance() {
-		if (typeof window.ethereum !== "undefined") {
-			const provider = new ethers.providers.Web3Provider(window.ethereum)
-			const balance = await provider.getBalance(contractAddress)
-			console.log(ethers.utils.formatEther(balance))
+	const getBalance = async () => {
+		if (typeof ethereum === "undefined") {
+			return
+		}
+		const provider = new ethers.providers.Web3Provider(ethereum)
+		const balance = await provider.getBalance(contractAddress)
+		console.log(ethers.utils.formatEther(balance))
+	}
+
+	const withdraw = async () => {
+		if (typeof ethereum === "undefined") {
+			return
+		}
+
+		console.log("Withdrawing...")
+		const provider = new ethers.providers.Web3Provider(ethereum)
+		const signer = provider.getSigner()
+		const contract = new ethers.Contract(contractAddress, abi, signer)
+
+		try {
+			const transactionResponse = await contract.withdraw()
+			await listenForTransactionMine(transactionResponse, provider)
+		} catch (error) {
+			console.log(error)
 		}
 	}
 
-	async function withdraw() {
-		if (typeof window.ethereum !== "undefined") {
-			console.log("Withdrawing...")
-			const provider = new ethers.providers.Web3Provider(window.ethereum)
-			const signer = provider.getSigner()
-			const contract = new ethers.Contract(contractAddress, abi, signer)
-
-			try {
-				const transactionResponse = await contract.withdraw()
-				await listenForTransactionMine(transactionResponse, provider)
-			} catch (error) {
-				console.log(error)
-			}
+	const publishCid = async () => {
+		if (typeof ethereum === "undefined") {
+			return
 		}
-	}
 
-	async function registerNewData() {
 		const cid = document.getElementById("cid").value
 		console.log(`Registering CID ${cid}...`)
-		if (typeof window.ethereum !== undefined) {
-			const provider = new ethers.providers.Web3Provider(window.ethereum)
-			const signer = provider.getSigner()
-			const contract = new ethers.Contract(contractAddress, abi, signer)
 
-			try {
-				const transactionResponse = await contract.registerNewData("cid")
-				await listenForTransactionMine(transactionResponse, provider)
-				console.log("Done!")
-			} catch (error) {
-				console.log(error)
-			}
+		const provider = new ethers.providers.Web3Provider(ethereum)
+		const signer = provider.getSigner()
+		const contract = new ethers.Contract(contractAddress, abi, signer)
+
+		try {
+			const transactionResponse = await contract.publishCid(cid)
+			await listenForTransactionMine(transactionResponse, provider)
+			console.log("Done!")
+		} catch (error) {
+			console.log(error)
 		}
 	}
 
-	function getPublishedCids() {
-		
+	const getPublishedCids = async () => {
+		if (typeof ethereum === "undefined") {
+			return
+		}
+
+		console.log("Getting my published CIDs...")
+		const provider = new ethers.providers.Web3Provider(ethereum)
+		const signer = provider.getSigner()
+		const contract = new ethers.Contract(contractAddress, abi, signer)
+
+		try {
+			const ownedCids = await contract.getPublishedCids()
+			console.log("Owning CIDs:", ownedCids)
+		} catch (error) {
+			console.log(error)
+		}
 	}
 
-	function listenForTransactionMine(transactionResponse, provider) {
+	const getPublishedCidsByUser = async () => {
+		if (typeof ethereum === "undefined") {
+			return
+		}
+
+		console.log("Getting published CIDs by user Address...")
+		const provider = new ethers.providers.Web3Provider(ethereum)
+		const signer = provider.getSigner()
+		const contract = new ethers.Contract(contractAddress, abi, signer)
+
+		const userAddress = document.getElementById("userAddress").value
+
+		try {
+			const ownedCids = await contract.getPublishedCidsByUser(userAddress)
+			console.log(`User with addrees ${userAddress} ownes:`, ownedCids)
+		} catch (error) {
+			console.log(error)
+		}
+	}
+
+	const getOwnerOfCid = async () => {
+		if (typeof ethereum === "undefined") {
+			return
+		}
+
+		console.log("Getting owner of CID...")
+		const provider = new ethers.providers.Web3Provider(ethereum)
+		const signer = provider.getSigner()
+		const contract = new ethers.Contract(contractAddress, abi, signer)
+
+		const cid = document.getElementById("cid").value
+
+		try {
+			const ownerAddress = await contract.getOwnerOfCid(cid)
+			console.log(`Owner of CID ${cid} is:`, ownerAddress)
+		} catch (error) {
+			console.log(error)
+		}
+	}
+
+	const listenForTransactionMine = (transactionResponse, provider) => {
 		console.log(`Mining ${transactionResponse.hash}...`)
 		return new Promise((resolve, _reject) => {
 			provider.once(transactionResponse.hash, (transactionReceipt) => {
 				console.log(`Completed with ${transactionReceipt.confirmations}`)
+				console.log("Transaction receipr", transactionReceipt)
 				resolve()
 			})
 		})
@@ -78,15 +151,17 @@
 </script>
 
 <div class="counter">
-	<button id="connectButton" on:click={connect}>{metamaskStatus}</button>
-    <button id="registerButton" on:click={registerNewData}>RegisterNewData</button>
+	<button id="connectButton" on:click={connect}>{metamaskConnectionStatus}</button>
+    <button id="publishCidButton" on:click={publishCid}>Publish CID</button>
 	<button id="balanceButton" on:click={getBalance}>GetBalance</button>
 	<button id="withdrawButton" on:click={withdraw}>Withdraw</button>
 	<button id="getPublishedCidsButton" on:click={getPublishedCids}>Get published CIDs</button>
-
+	<button id="getPublishedCidsByUserButton" on:click={getPublishedCidsByUser}>GetPublishedCidsByUser</button>
+	<button id="getOwnerOfCid" on:click={getOwnerOfCid}>GetOwnerOfCid</button>
+	<br/>
 	<label for="cid">CID</label>
 	<input id="cid" placeholder="CID"/>
-
+	<input id="userAddress" placeholder="user address"/>
 
 </div>
 

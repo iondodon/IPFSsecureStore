@@ -1,4 +1,4 @@
-export const contractAddress = '0x7E258Deba364788609F7Ae7DAE5070a41e0Bed0c'
+export const contractAddress = '0x5FbDB2315678afecb367f032d93F642f64180aa3'
 export const abi = [
   {
     inputs: [],
@@ -46,6 +46,57 @@ export const abi = [
     type: 'fallback'
   },
   {
+    inputs: [
+      {
+        internalType: 'string',
+        name: 'cid',
+        type: 'string'
+      }
+    ],
+    name: 'getOwnerOfCid',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address'
+      }
+    ],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [],
+    name: 'getPublishedCids',
+    outputs: [
+      {
+        internalType: 'string[]',
+        name: '',
+        type: 'string[]'
+      }
+    ],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'userAddress',
+        type: 'address'
+      }
+    ],
+    name: 'getPublishedCidsByUser',
+    outputs: [
+      {
+        internalType: 'string[]',
+        name: '',
+        type: 'string[]'
+      }
+    ],
+    stateMutability: 'view',
+    type: 'function'
+  },
+  {
     inputs: [],
     name: 'i_owner',
     outputs: [
@@ -66,7 +117,7 @@ export const abi = [
         type: 'string'
       }
     ],
-    name: 'registerNewData',
+    name: 'publishCid',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function'
