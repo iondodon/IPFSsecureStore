@@ -7,8 +7,16 @@
 	let connectedAccounts = []
 	$: metamaskConnectionStatus = connectedAccounts.length > 0 ? "Connected" : "Not conneted"  
 
+	let provider = null
+	let signer = null
+	let contract = null
+
 	onMount(async () => {
 		ethereum = window.ethereum
+
+		provider = new ethers.providers.Web3Provider(ethereum)
+		signer = provider.getSigner()
+		contract = new ethers.Contract(contractAddress, abi, signer)
 
 		ethereum.on('accountsChanged', (accounts) => {
 			console.log("Accounts changed", accounts)
@@ -17,7 +25,7 @@
 	})
 
 	const connect = async () => {
-		if (typeof ethereum === "undefined") {
+		if (typeof ethereum === undefined) {
 			console.log("Please install Metamask")
 		}
 
@@ -32,24 +40,19 @@
 	}
 
 	const getBalance = async () => {
-		if (typeof ethereum === "undefined") {
+		if (typeof ethereum === undefined) {
 			return
 		}
-		const provider = new ethers.providers.Web3Provider(ethereum)
 		const balance = await provider.getBalance(contractAddress)
 		console.log(ethers.utils.formatEther(balance))
 	}
 
 	const withdraw = async () => {
-		if (typeof ethereum === "undefined") {
+		if (typeof ethereum === undefined) {
 			return
 		}
 
 		console.log("Withdrawing...")
-		const provider = new ethers.providers.Web3Provider(ethereum)
-		const signer = provider.getSigner()
-		const contract = new ethers.Contract(contractAddress, abi, signer)
-
 		try {
 			const transactionResponse = await contract.withdraw()
 			await listenForTransactionMine(transactionResponse, provider)
@@ -59,16 +62,12 @@
 	}
 
 	const publishCid = async () => {
-		if (typeof ethereum === "undefined") {
+		if (typeof ethereum === undefined) {
 			return
 		}
 
 		const cid = document.getElementById("cid").value
 		console.log(`Registering CID ${cid}...`)
-
-		const provider = new ethers.providers.Web3Provider(ethereum)
-		const signer = provider.getSigner()
-		const contract = new ethers.Contract(contractAddress, abi, signer)
 
 		try {
 			const transactionResponse = await contract.publishCid(cid)
@@ -80,14 +79,11 @@
 	}
 
 	const getPublishedCids = async () => {
-		if (typeof ethereum === "undefined") {
+		if (typeof ethereum === undefined) {
 			return
 		}
 
 		console.log("Getting my published CIDs...")
-		const provider = new ethers.providers.Web3Provider(ethereum)
-		const signer = provider.getSigner()
-		const contract = new ethers.Contract(contractAddress, abi, signer)
 
 		try {
 			const ownedCids = await contract.getPublishedCids()
@@ -98,15 +94,11 @@
 	}
 
 	const getPublishedCidsByUser = async () => {
-		if (typeof ethereum === "undefined") {
+		if (typeof ethereum === undefined) {
 			return
 		}
 
 		console.log("Getting published CIDs by user Address...")
-		const provider = new ethers.providers.Web3Provider(ethereum)
-		const signer = provider.getSigner()
-		const contract = new ethers.Contract(contractAddress, abi, signer)
-
 		const userAddress = document.getElementById("userAddress").value
 
 		try {
@@ -118,15 +110,11 @@
 	}
 
 	const getOwnerOfCid = async () => {
-		if (typeof ethereum === "undefined") {
+		if (typeof ethereum === undefined) {
 			return
 		}
 
 		console.log("Getting owner of CID...")
-		const provider = new ethers.providers.Web3Provider(ethereum)
-		const signer = provider.getSigner()
-		const contract = new ethers.Contract(contractAddress, abi, signer)
-
 		const cid = document.getElementById("cid").value
 
 		try {
