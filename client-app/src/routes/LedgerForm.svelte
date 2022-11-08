@@ -2,7 +2,9 @@
 	import { ethers }  from "ethers"
 	import { abi, contractAddress } from "./constants"
 	import { onMount } from 'svelte'
+	import * as IPFS from 'ipfs-core'
 
+	let ipfs = null
 	let ethereum = null
 	let connectedAccounts = []
 	$: metamaskConnectionStatus = connectedAccounts.length > 0 ? "Connected" : "Not conneted"  
@@ -10,9 +12,11 @@
 	let provider = null
 	let signer = null
 	let contract = null
+	
 
 	onMount(async () => {
 		ethereum = window.ethereum
+		ipfs = await IPFS.create()
 
 		provider = new ethers.providers.Web3Provider(ethereum)
 		signer = provider.getSigner()
@@ -29,12 +33,7 @@
 			console.log("Please install Metamask")
 		}
 
-		try {
-			await ethereum.request({ method: "eth_requestAccounts" })
-		} catch (error) {
-			console.log(error)
-		}
-
+		await ethereum.request({ method: "eth_requestAccounts" })
 		const accounts = await ethereum.request({ method: "eth_accounts" })
 		console.log("Accounts: ", accounts)
 	}
@@ -53,29 +52,25 @@
 		}
 
 		console.log("Withdrawing...")
-		try {
-			const transactionResponse = await contract.withdraw()
-			await listenForTransactionMine(transactionResponse, provider)
-		} catch (error) {
-			console.log(error)
-		}
+		const transactionResponse = await contract.withdraw()
+		await listenForTransactionMine(transactionResponse, provider)
 	}
 
-	const publishCid = async () => {
+	const publishValue = async () => {
 		if (typeof ethereum === undefined) {
 			return
 		}
-
-		const cid = document.getElementById("cid").value
-		console.log(`Registering CID ${cid}...`)
-
-		try {
-			const transactionResponse = await contract.publishCid(cid)
-			await listenForTransactionMine(transactionResponse, provider)
-			console.log("Done!")
-		} catch (error) {
-			console.log(error)
+		if (ipfs === undefined) {
+			console.log("IPFS node is not up!")
 		}
+
+		const valueToStore = document.getElementById("valueToStore").value
+		const response = await ipfs.add(valueToStore)
+		console.log("Response ", response)
+		const cid = response.path
+		const transactionResponse = await contract.publishCid(cid)
+		await listenForTransactionMine(transactionResponse, provider)
+		console.log("Done!")
 	}
 
 	const getPublishedCids = async () => {
@@ -84,13 +79,8 @@
 		}
 
 		console.log("Getting my published CIDs...")
-
-		try {
-			const ownedCids = await contract.getPublishedCids()
-			console.log("Owning CIDs:", ownedCids)
-		} catch (error) {
-			console.log(error)
-		}
+		const ownedCids = await contract.getPublishedCids()
+		console.log("Owning CIDs:", ownedCids)
 	}
 
 	const getPublishedCidsByUser = async () => {
@@ -100,13 +90,8 @@
 
 		console.log("Getting published CIDs by user Address...")
 		const userAddress = document.getElementById("userAddress").value
-
-		try {
-			const ownedCids = await contract.getPublishedCidsByUser(userAddress)
-			console.log(`User with addrees ${userAddress} ownes:`, ownedCids)
-		} catch (error) {
-			console.log(error)
-		}
+		const ownedCids = await contract.getPublishedCidsByUser(userAddress)
+		console.log(`User with addrees ${userAddress} ownes:`, ownedCids)
 	}
 
 	const getOwnerOfCid = async () => {
@@ -116,13 +101,8 @@
 
 		console.log("Getting owner of CID...")
 		const cid = document.getElementById("cid").value
-
-		try {
-			const ownerAddress = await contract.getOwnerOfCid(cid)
-			console.log(`Owner of CID ${cid} is:`, ownerAddress)
-		} catch (error) {
-			console.log(error)
-		}
+		const ownerAddress = await contract.getOwnerOfCid(cid)
+		console.log(`Owner of CID ${cid} is:`, ownerAddress)
 	}
 
 	const listenForTransactionMine = (transactionResponse, provider) => {
@@ -138,20 +118,23 @@
 
 </script>
 
-<div class="counter">
+<div id="form">
 	<button id="connectButton" on:click={connect}>{metamaskConnectionStatus}</button>
-    <button id="publishCidButton" on:click={publishCid}>Publish CID</button>
+    <button id="publishValueButton" on:click={publishValue}>Publish Value</button>
 	<button id="balanceButton" on:click={getBalance}>GetBalance</button>
 	<button id="withdrawButton" on:click={withdraw}>Withdraw</button>
 	<button id="getPublishedCidsButton" on:click={getPublishedCids}>Get published CIDs</button>
 	<button id="getPublishedCidsByUserButton" on:click={getPublishedCidsByUser}>GetPublishedCidsByUser</button>
 	<button id="getOwnerOfCid" on:click={getOwnerOfCid}>GetOwnerOfCid</button>
 	<br/>
-	<label for="cid">CID</label>
 	<input id="cid" placeholder="CID"/>
+	<input id="valueToStore" placeholder="ValueToStore"/>
 	<input id="userAddress" placeholder="user address"/>
 </div>
 
 <style>
-
+	#form {
+		display: flex;
+		flex-direction: column;
+	}
 </style>
