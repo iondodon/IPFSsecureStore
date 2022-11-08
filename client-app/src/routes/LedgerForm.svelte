@@ -3,7 +3,8 @@
 	import { abi, contractAddress } from "./constants"
 	import { onMount } from 'svelte'
 	import * as IPFS from 'ipfs-core'
-
+	import { Buffer } from "buffer"
+	
 	let ipfs = null
 	let ethereum = null
 	let connectedAccounts = []
@@ -12,6 +13,18 @@
 	let provider = null
 	let signer = null
 	let contract = null
+
+	let files
+
+	$: if (files) {
+		// Note that `files` is of type `FileList`, not an Array:
+		// https://developer.mozilla.org/en-US/docs/Web/API/FileList
+		console.log(files);
+
+		for (const file of files) {
+			console.log(`${file.name}: ${file.size} bytes`);
+		}
+	}
 	
 
 	onMount(async () => {
@@ -73,6 +86,35 @@
 		console.log("Done!")
 	}
 
+	const publishFile = async () => {
+		if (typeof ethereum === undefined) {
+			return
+		}
+		if (ipfs === undefined) {
+			console.log("IPFS node is not up!")
+			return
+		}
+		if (files.length < 1) {
+			console.log("No file selected")
+			return
+		}
+		const reader = new FileReader()
+
+		reader.onloadend = async () => {
+			const buf = new Buffer(reader.result)
+			const result = await ipfs.add(buf)
+			const cid = result.path
+
+			const transactionResponse = await contract.publishCid(cid)
+			await listenForTransactionMine(transactionResponse, provider)
+
+			let url = `https://ipfs.io/ipfs/${cid}`
+			console.log(`Url --> ${url}`)
+		}
+
+		reader.readAsArrayBuffer(files[0])
+    }
+
 	const getPublishedCids = async () => {
 		if (typeof ethereum === undefined) {
 			return
@@ -121,6 +163,8 @@
 <div id="form">
 	<button id="connectButton" on:click={connect}>{metamaskConnectionStatus}</button>
     <button id="publishValueButton" on:click={publishValue}>Publish Value</button>
+	<button id="publishFileButton" on:click={publishFile}>Publish File</button>
+
 	<button id="balanceButton" on:click={getBalance}>GetBalance</button>
 	<button id="withdrawButton" on:click={withdraw}>Withdraw</button>
 	<button id="getPublishedCidsButton" on:click={getPublishedCids}>Get published CIDs</button>
@@ -130,6 +174,10 @@
 	<input id="cid" placeholder="CID"/>
 	<input id="valueToStore" placeholder="ValueToStore"/>
 	<input id="userAddress" placeholder="user address"/>
+	
+	<br/>
+	<label for="fileToUpload">Upload a file:</label>
+	<input  bind:files id="fileToUpload" name="File to upload" type="file" />
 </div>
 
 <style>
