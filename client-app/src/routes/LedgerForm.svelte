@@ -7,14 +7,14 @@
 	
 	let ipfs = null
 	let ethereum = null
-	let connectedAccounts = []
-	$: metamaskConnectionStatus = connectedAccounts.length > 0 ? "Connected" : "Not conneted"  
+	$: connectedAccounts = []
 
 	let provider = null
 	let signer = null
 	let contract = null
 
-	let files
+	let files = []
+	$: cids = []
 
 	$: if (files) {
 		// Note that `files` is of type `FileList`, not an Array:
@@ -38,6 +38,11 @@
 		ethereum.on('accountsChanged', (accounts) => {
 			console.log("Accounts changed", accounts)
 			connectedAccounts = accounts
+			if (accounts.length > 0) {
+				getPublishedCids()
+			} else {
+				cids = []
+			}
 		})
 	})
 
@@ -69,23 +74,6 @@
 		await listenForTransactionMine(transactionResponse, provider)
 	}
 
-	const publishValue = async () => {
-		if (typeof ethereum === undefined) {
-			return
-		}
-		if (ipfs === undefined) {
-			console.log("IPFS node is not up!")
-		}
-
-		const valueToStore = document.getElementById("valueToStore").value
-		const response = await ipfs.add(valueToStore)
-		console.log("Response ", response)
-		const cid = response.path
-		const transactionResponse = await contract.publishCid(cid)
-		await listenForTransactionMine(transactionResponse, provider)
-		console.log("Done!")
-	}
-
 	const publishFile = async () => {
 		if (typeof ethereum === undefined) {
 			return
@@ -108,6 +96,8 @@
 			const transactionResponse = await contract.publishCid(cid)
 			await listenForTransactionMine(transactionResponse, provider)
 
+			cids = [...cids, cid]
+
 			let url = `https://ipfs.io/ipfs/${cid}`
 			console.log(`Url --> ${url}`)
 		}
@@ -122,6 +112,7 @@
 
 		console.log("Getting my published CIDs...")
 		const ownedCids = await contract.getPublishedCids()
+		cids = ownedCids
 		console.log("Owning CIDs:", ownedCids)
 	}
 
@@ -160,28 +151,98 @@
 
 </script>
 
-<div id="form">
-	<button id="connectButton" on:click={connect}>{metamaskConnectionStatus}</button>
-    <button id="publishValueButton" on:click={publishValue}>Publish Value</button>
-	<button id="publishFileButton" on:click={publishFile}>Publish File</button>
+<div id="container">
+	<div id="form">
+		<div class="alert alert-primary" role="alert">
+			{#if connectedAccounts.length > 0}
+				Connected wallet address: {connectedAccounts[0]}
+			{:else}
+				No account connected
+			{/if}
+		</div>
 
-	<button id="balanceButton" on:click={getBalance}>GetBalance</button>
-	<button id="withdrawButton" on:click={withdraw}>Withdraw</button>
-	<button id="getPublishedCidsButton" on:click={getPublishedCids}>Get published CIDs</button>
-	<button id="getPublishedCidsByUserButton" on:click={getPublishedCidsByUser}>GetPublishedCidsByUser</button>
-	<button id="getOwnerOfCid" on:click={getOwnerOfCid}>GetOwnerOfCid</button>
-	<br/>
-	<input id="cid" placeholder="CID"/>
-	<input id="valueToStore" placeholder="ValueToStore"/>
-	<input id="userAddress" placeholder="user address"/>
-	
-	<br/>
-	<label for="fileToUpload">Upload a file:</label>
-	<input  bind:files id="fileToUpload" name="File to upload" type="file" />
+		<button 
+			type="button" 
+			class="btn btn-success" 
+			id="connectButton" 
+			on:click={connect}
+			disabled={(() => connectedAccounts.length > 0)()}
+		>
+			{#if connectedAccounts.length > 0}
+				Connected
+			{:else}
+				Connect to MetaMask
+			{/if}
+		</button>
+
+		<br/>
+
+		<div class="btn-group" role="group">
+			<button class="btn btn-outline-primary" id="publishFileButton" on:click={publishFile}>Publish File</button>
+
+			<button class="btn btn-outline-primary" id="balanceButton" on:click={getBalance}>GetBalance</button>
+			<button class="btn btn-outline-primary" id="withdrawButton" on:click={withdraw}>Withdraw</button>
+			<button class="btn btn-outline-primary" id="getPublishedCidsButton" on:click={getPublishedCids}>Get published CIDs</button>
+			<button class="btn btn-outline-primary" id="getPublishedCidsByUserButton" on:click={getPublishedCidsByUser}>GetPublishedCidsByUser</button>
+			<button class="btn btn-outline-primary" id="getOwnerOfCid" on:click={getOwnerOfCid}>GetOwnerOfCid</button>
+		</div>
+
+		<br/>
+
+		<div class="input-group mb-3">
+			<span class="input-group-text" id="basic-addon3">CID</span>
+			<input type="text" class="form-control" id="cid" aria-describedby="basic-addon3">
+		</div>
+
+		<div class="input-group mb-3">
+			<span class="input-group-text" id="basic-addon3">User wallet address</span>
+			<input type="text" class="form-control" id="userAddress" aria-describedby="basic-addon3">
+		</div>
+		
+		<div>
+			<label for="formFileLg" class="form-label">Upload a file</label>
+			<input class="form-control form-control-lg" name="File to upload" id="fileToUpload" bind:files type="file">
+		</div>
+	</div>
+
+
+	<div id="stored-cids">
+		<table class="table">
+			<caption>List of stored CIDs</caption>
+			<thead>
+				<tr>
+				<th scope="col">CID</th>
+				<th scope="col">IPFS address</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each cids as cid}
+					<tr>
+						<th scope="row">{cid}</th>
+						<td>
+							<a href="ipfs://{cid}">ipfs://{cid}</a>
+						</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
+
 </div>
 
 <style>
+	#container {
+		display: flex;
+		flex-direction: column;
+		margin: auto;
+	}
+
+	#stored-cids {
+		margin-top: 20px;
+	}
+
 	#form {
+		margin: auto;
 		display: flex;
 		flex-direction: column;
 	}
