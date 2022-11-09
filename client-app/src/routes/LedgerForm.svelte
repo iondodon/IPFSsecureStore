@@ -107,6 +107,31 @@
 		reader.readAsArrayBuffer(files[0])
     }
 
+	const getContentOnCid = async () => {
+		if (typeof ethereum === undefined) {
+			return
+		}
+		if (ipfs === undefined) {
+			console.log("IPFS node is not up!")
+			return
+		}
+
+		const cid = document.getElementById("cid").value
+		// ipfs download file from cid then download it
+		const chunks = []
+		for await (const chunk of ipfs.cat(cid)) {
+			chunks.push(chunk)
+		}
+		const buf = Buffer.concat(chunks)
+		const blob = new Blob([buf], { type: "application/octet-stream" })
+		const url = URL.createObjectURL(blob)
+		const a = document.createElement("a")
+		a.href = url
+		a.download = cid
+		document.body.appendChild(a)
+		a.click()
+	}
+
 	const getPublishedCids = async () => {
 		if (typeof ethereum === undefined) {
 			return
@@ -191,12 +216,12 @@
 
 		<div class="btn-group" role="group">
 			<button class="btn btn-outline-primary" id="publishFileButton" on:click={publishFile}>Publish File</button>
-
 			<button class="btn btn-outline-primary" id="balanceButton" on:click={getBalance}>GetBalance</button>
 			<button class="btn btn-outline-primary" id="withdrawButton" on:click={withdraw}>Withdraw</button>
 			<button class="btn btn-outline-primary" id="getPublishedCidsButton" on:click={getPublishedCids}>Get published CIDs</button>
 			<button class="btn btn-outline-primary" id="getPublishedCidsByUserButton" on:click={getPublishedCidsByUser}>GetPublishedCidsByUser</button>
 			<button class="btn btn-outline-primary" id="getOwnerOfCid" on:click={getOwnerOfCid}>GetOwnerOfCid</button>
+			<button class="btn btn-outline-primary" id="getContentOnCid" on:click={getContentOnCid}>GetContentOnCid</button>
 		</div>
 
 		<br/>
