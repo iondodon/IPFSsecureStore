@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte'
 	import * as IPFS from 'ipfs-core'
 	import { Buffer } from "buffer"
+	import CryptoJS from "crypto-js"
 	
 	let ipfs = null
 	let ethereum = null
@@ -92,7 +93,15 @@
 
 		reader.onloadend = async () => {
 			const buf = new Buffer(reader.result)
-			const result = await ipfs.add(buf)
+			
+			// create string from buf
+			const str = buf.toString('utf8')
+			console.log('plain', str)
+			// encrypt string
+			const encrypted = CryptoJS.AES.encrypt(str, "secret key 123").toString()
+			console.log('encrypted', encrypted)
+
+			const result = await ipfs.add(encrypted)
 			const cid = result.path
 
 			const transactionResponse = await contract.publishCid(cid)
@@ -122,7 +131,16 @@
 		for await (const chunk of ipfs.cat(cid)) {
 			chunks.push(chunk)
 		}
-		const buf = Buffer.concat(chunks)
+		// get string from chunks
+		const str = Buffer.concat(chunks).toString('utf8')
+		console.log('str', str)
+		// descrypt string
+		const decrypted = CryptoJS.AES.decrypt(str, "secret key 123").toString(CryptoJS.enc.Utf8)
+		console.log('decrypted', decrypted)
+		// get buffer from string
+		const buf = Buffer.from(decrypted, 'utf8')
+
+		// const buf = Buffer.concat(chunks)
 		const blob = new Blob([buf], { type: "application/octet-stream" })
 		const url = URL.createObjectURL(blob)
 		const a = document.createElement("a")

@@ -26,6 +26,7 @@
 		"bootstrap": "^5.2.2",
 		"buffer": "^6.0.3",
 		"crypto-js": "^4.1.1",
+		"encrypt-uint8array": "^1.0.0",
 		"ethers": "^5.7.2",
 		"ipfs-core": "^0.17.0",
 		"ipfs-http-client": "^59.0.0",
