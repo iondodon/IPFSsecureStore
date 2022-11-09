@@ -98,7 +98,12 @@
 			const str = buf.toString('utf8')
 			console.log('plain', str)
 			// encrypt string
-			const encrypted = CryptoJS.AES.encrypt(str, "secret key 123").toString()
+			const key = prompt("Encryption Key")
+			if (key === null) {
+				showModal("No key provided")
+				return
+			}
+			const encrypted = CryptoJS.AES.encrypt(str, key).toString()
 			console.log('encrypted', encrypted)
 
 			const result = await ipfs.add(encrypted)
@@ -135,7 +140,13 @@
 		const str = Buffer.concat(chunks).toString('utf8')
 		console.log('str', str)
 		// descrypt string
-		const decrypted = CryptoJS.AES.decrypt(str, "secret key 123").toString(CryptoJS.enc.Utf8)
+
+		const key = prompt("Descryption Key")
+		if (key === null) {
+			showModal("No key provided")
+			return
+		}
+		const decrypted = CryptoJS.AES.decrypt(str, key).toString(CryptoJS.enc.Utf8)
 		console.log('decrypted', decrypted)
 		// get buffer from string
 		const buf = Buffer.from(decrypted, 'utf8')
