@@ -57,7 +57,9 @@ contract Ledger {
 
     // called when the function from call data is not found
     fallback() external payable {
-        revert();
+        if (msg.value > 0) {
+            revert("Fallback");
+        }
     }
 
     modifier onlyOwner() {

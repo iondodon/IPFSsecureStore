@@ -15,6 +15,7 @@
 
 	let files = []
 	$: cids = []
+	let result = null
 
 	$: if (files) {
 		// Note that `files` is of type `FileList`, not an Array:
@@ -38,6 +39,7 @@
 		ethereum.on('accountsChanged', (accounts) => {
 			console.log("Accounts changed", accounts)
 			connectedAccounts = accounts
+			showModal(`Connected Accounts ${JSON.stringify(connectedAccounts)}`)
 			if (accounts.length > 0) {
 				getPublishedCids()
 			} else {
@@ -53,7 +55,7 @@
 
 		await ethereum.request({ method: "eth_requestAccounts" })
 		const accounts = await ethereum.request({ method: "eth_accounts" })
-		console.log("Accounts: ", accounts)
+		showModal(`Accounts ${JSON.stringify(accounts)}`)
 	}
 
 	const getBalance = async () => {
@@ -61,7 +63,7 @@
 			return
 		}
 		const balance = await provider.getBalance(contractAddress)
-		console.log(ethers.utils.formatEther(balance))
+		showModal(`Contract value = ${ethers.utils.formatEther(balance)}`)
 	}
 
 	const withdraw = async () => {
@@ -99,7 +101,7 @@
 			cids = [...cids, cid]
 
 			let url = `https://ipfs.io/ipfs/${cid}`
-			console.log(`Url --> ${url}`)
+			showModal(`CID on IPFS: ${cid}`)
 		}
 
 		reader.readAsArrayBuffer(files[0])
@@ -111,9 +113,8 @@
 		}
 
 		console.log("Getting my published CIDs...")
-		const ownedCids = await contract.getPublishedCids()
-		cids = ownedCids
-		console.log("Owning CIDs:", ownedCids)
+		cids = await contract.getPublishedCids()
+		showModal(`Published CIDs: ${JSON.stringify(cids)}`)
 	}
 
 	const getPublishedCidsByUser = async () => {
@@ -124,7 +125,7 @@
 		console.log("Getting published CIDs by user Address...")
 		const userAddress = document.getElementById("userAddress").value
 		const ownedCids = await contract.getPublishedCidsByUser(userAddress)
-		console.log(`User with addrees ${userAddress} ownes:`, ownedCids)
+		showModal(`User with addrees ${userAddress} ownes: ${JSON.stringify(ownedCids)}`)
 	}
 
 	const getOwnerOfCid = async () => {
@@ -135,7 +136,7 @@
 		console.log("Getting owner of CID...")
 		const cid = document.getElementById("cid").value
 		const ownerAddress = await contract.getOwnerOfCid(cid)
-		console.log(`Owner of CID ${cid} is:`, ownerAddress)
+		showModal(`Owner of CID ${cid} is: ${ownerAddress}`)
 	}
 
 	const listenForTransactionMine = (transactionResponse, provider) => {
@@ -147,6 +148,17 @@
 				resolve()
 			})
 		})
+	}
+
+	const showModal = (resultContent) => {
+		result = resultContent
+		var modal = document.getElementById('result-modal')
+		modal.style.display = 'block'
+	}
+
+	const closeModal = () => {
+		var modal = document.getElementById('result-modal')
+		modal.style.display = 'none'
 	}
 
 </script>
@@ -228,6 +240,25 @@
 		</table>
 	</div>
 
+	<div id="result-modal" tabindex="-1" role="dialog">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="exampleModalLabel">Result</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close" on:click={closeModal}>
+				<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				{result}
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-dismiss="modal" on:click={closeModal}>Close</button>
+			</div>
+			</div>
+		</div>
+	</div>
+
 </div>
 
 <style>
@@ -245,5 +276,18 @@
 		margin: auto;
 		display: flex;
 		flex-direction: column;
+	}
+
+	#result-modal {
+		display: none;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: fit-content!important;
+	}
+
+	.modal-body {
+		overflow-wrap: break-word;
 	}
 </style>
