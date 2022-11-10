@@ -83,11 +83,16 @@
 
 		return new Promise((resolve, reject) => {
 			reader.onload = () => {
-				var key = "1234567887654321"
-				var wordArray = CryptoJS.lib.WordArray.create(reader.result)          // Convert: ArrayBuffer -> WordArray
-				var encrypted = CryptoJS.AES.encrypt(wordArray, key).toString()        // Encryption: I: WordArray -> O: -> Base64 encoded string (OpenSSL-format)
+				const key = prompt("Key for encryption")
+				if (key === null) {
+					showModal("No key provided")
+					return
+				}
 
-				var fileEnc = new Blob([encrypted])                                    // Create blob from string
+				var wordArray = CryptoJS.lib.WordArray.create(reader.result)          
+				var encrypted = CryptoJS.AES.encrypt(wordArray, key).toString()      
+
+				var fileEnc = new Blob([encrypted])
 
 				// var a = document.createElement("a")
 				// var url = window.URL.createObjectURL(fileEnc)
@@ -116,22 +121,26 @@
 		return uInt8Array
 	}
 
-	const decrypt = (file) => {
+	const decrypt = (file, cid) => {
 		var reader = new FileReader()
 		reader.readAsText(file)
 
 		return new Promise((resolve, reject) => {
 			reader.onload = () => {
-				var key = "1234567887654321"
+				const key = prompt("Key for descryption")
+				if (key === null) {
+					showModal("No key provided")
+					return
+				}
 
-				var decrypted = CryptoJS.AES.decrypt(reader.result, key)               // Decryption: I: Base64 encoded string (OpenSSL-format) -> O: WordArray
-				var typedArray = convertWordArrayToUint8Array(decrypted)               // Convert: WordArray -> typed array
+				var decrypted = CryptoJS.AES.decrypt(reader.result, key)          
+				var typedArray = convertWordArrayToUint8Array(decrypted)              
 
-				var fileDec = new Blob([typedArray])                                   // Create blob from typed array
+				var fileDec = new Blob([typedArray])                                
 
 				var a = document.createElement("a")
 				var url = window.URL.createObjectURL(fileDec)
-				var filename = "descrypted.dec"
+				var filename = `${cid}.dec`
 				a.href = url
 				a.download = filename
 				a.click()
@@ -190,7 +199,7 @@
 		// create file from chunks
 		const file = new Blob(chunks, { type: "application/octet-stream" })
 		// descrypt file
-		const decrypted = await decrypt(file)
+		const decrypted = await decrypt(file, cid)
 
 		console.log('decrypted', decrypted)
 	}
@@ -308,7 +317,7 @@
 
 	<div id="stored-cids">
 		<table class="table">
-			<caption>List of stored CIDs</caption>
+			<caption>List of stored files (CID)</caption>
 			<thead>
 				<tr>
 				<th scope="col">CID</th>
