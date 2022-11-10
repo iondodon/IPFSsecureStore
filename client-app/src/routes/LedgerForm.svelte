@@ -14,7 +14,7 @@
 	let signer = null
 	let contract = null
 
-	let files = []
+	let files = null
 	$: cids = []
 	let result = null
 
@@ -77,6 +77,71 @@
 		await listenForTransactionMine(transactionResponse, provider)
 	}
 
+	const encrypt = (file) => {
+		var reader = new FileReader()
+		reader.readAsArrayBuffer(file)
+
+		return new Promise((resolve, reject) => {
+			reader.onload = () => {
+				var key = "1234567887654321"
+				var wordArray = CryptoJS.lib.WordArray.create(reader.result)          // Convert: ArrayBuffer -> WordArray
+				var encrypted = CryptoJS.AES.encrypt(wordArray, key).toString()        // Encryption: I: WordArray -> O: -> Base64 encoded string (OpenSSL-format)
+
+				var fileEnc = new Blob([encrypted])                                    // Create blob from string
+
+				// var a = document.createElement("a")
+				// var url = window.URL.createObjectURL(fileEnc)
+				// var filename = file.name + ".enc"
+				// a.href = url
+				// a.download = filename
+				// a.click()
+				// window.URL.revokeObjectURL(url)
+
+				resolve(fileEnc)
+			}
+		})
+	}
+
+	const convertWordArrayToUint8Array = (wordArray) => {
+		var arrayOfWords = wordArray.hasOwnProperty("words") ? wordArray.words : []
+		var length = wordArray.hasOwnProperty("sigBytes") ? wordArray.sigBytes : arrayOfWords.length * 4
+		var uInt8Array = new Uint8Array(length), index=0, word, i
+		for (i=0; i<length; i++) {
+			word = arrayOfWords[i]
+			uInt8Array[index++] = word >> 24
+			uInt8Array[index++] = (word >> 16) & 0xff
+			uInt8Array[index++] = (word >> 8) & 0xff
+			uInt8Array[index++] = word & 0xff
+		}
+		return uInt8Array
+	}
+
+	const decrypt = (file) => {
+		var reader = new FileReader()
+		reader.readAsText(file)
+
+		return new Promise((resolve, reject) => {
+			reader.onload = () => {
+				var key = "1234567887654321"
+
+				var decrypted = CryptoJS.AES.decrypt(reader.result, key)               // Decryption: I: Base64 encoded string (OpenSSL-format) -> O: WordArray
+				var typedArray = convertWordArrayToUint8Array(decrypted)               // Convert: WordArray -> typed array
+
+				var fileDec = new Blob([typedArray])                                   // Create blob from typed array
+
+				var a = document.createElement("a")
+				var url = window.URL.createObjectURL(fileDec)
+				var filename = "descrypted.dec"
+				a.href = url
+				a.download = filename
+				a.click()
+				window.URL.revokeObjectURL(url)
+
+				resolve(fileDec)
+			}
+		})
+	}
+
 	const publishFile = async () => {
 		if (typeof ethereum === undefined) {
 			return
@@ -89,36 +154,21 @@
 			console.log("No file selected")
 			return
 		}
-		const reader = new FileReader()
 
-		reader.onloadend = async () => {
-			const buf = new Buffer(reader.result)
-			
-			// create string from buf
-			const str = buf.toString('utf8')
-			console.log('plain', str)
-			// encrypt string
-			const key = prompt("Encryption Key")
-			if (key === null) {
-				showModal("No key provided")
-				return
-			}
-			const encrypted = CryptoJS.AES.encrypt(str, key).toString()
-			console.log('encrypted', encrypted)
+		const encrypted = await encrypt(files[0])
 
-			const result = await ipfs.add(encrypted)
-			const cid = result.path
+		console.log('encrypted', encrypted)
 
-			const transactionResponse = await contract.publishCid(cid)
-			await listenForTransactionMine(transactionResponse, provider)
+		const result = await ipfs.add(encrypted)
+		const cid = result.path
 
-			cids = [...cids, cid]
+		const transactionResponse = await contract.publishCid(cid)
+		await listenForTransactionMine(transactionResponse, provider)
 
-			let url = `https://ipfs.io/ipfs/${cid}`
-			showModal(`CID on IPFS: ${cid}`)
-		}
+		cids = [...cids, cid]
 
-		reader.readAsArrayBuffer(files[0])
+		let url = `https://ipfs.io/ipfs/${cid}`
+		showModal(`CID on IPFS: ${cid}`)
     }
 
 	const getContentOnCid = async () => {
@@ -136,29 +186,13 @@
 		for await (const chunk of ipfs.cat(cid)) {
 			chunks.push(chunk)
 		}
-		// get string from chunks
-		const str = Buffer.concat(chunks).toString('utf8')
-		console.log('str', str)
-		// descrypt string
+		
+		// create file from chunks
+		const file = new Blob(chunks, { type: "application/octet-stream" })
+		// descrypt file
+		const decrypted = await decrypt(file)
 
-		const key = prompt("Descryption Key")
-		if (key === null) {
-			showModal("No key provided")
-			return
-		}
-		const decrypted = CryptoJS.AES.decrypt(str, key).toString(CryptoJS.enc.Utf8)
 		console.log('decrypted', decrypted)
-		// get buffer from string
-		const buf = Buffer.from(decrypted, 'utf8')
-
-		// const buf = Buffer.concat(chunks)
-		const blob = new Blob([buf], { type: "application/octet-stream" })
-		const url = URL.createObjectURL(blob)
-		const a = document.createElement("a")
-		a.href = url
-		a.download = cid
-		document.body.appendChild(a)
-		a.click()
 	}
 
 	const getPublishedCids = async () => {
